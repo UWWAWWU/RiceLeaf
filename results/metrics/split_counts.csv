@@ -1,0 +1,5 @@
+class,train,validation,test
+bacterial_blight,897,194,193
+blast,674,144,142
+brown_spot,843,172,185
+tungro,869,227,212

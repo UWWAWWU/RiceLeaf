@@ -1,0 +1,11 @@
+{
+  "provenance": "Extracted from saved outputs of user-supplied RiceLeaf.ipynb; no training rerun",
+  "classifier": "densenet121",
+  "test_images": 732,
+  "accuracy": 1.0,
+  "macro_f1": 1.0,
+  "segmentation_mean_dice": 0.8160031076946513,
+  "segmentation_mean_iou": 0.6995245555571037,
+  "segmentation_threshold": 0.4,
+  "external_test_performed": false
+}

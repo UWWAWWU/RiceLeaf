@@ -72,6 +72,53 @@ Distribusi citra setelah penghapusan duplikat identik:
 | Tungro | 1.308 |
 | **Total** | **4.752** |
 
+## Training dan evaluasi
+
+[Notebook training dan evaluasi](notebooks/RiceLeaf.ipynb) memuat audit dataset, split berdasarkan kelompok pHash, fine-tuning tiga kandidat classifier, training U-Net++, dan ekspor model. Output ilmiah asli dipertahankan; log instalasi, progress bar, dan metadata sesi dibersihkan.
+
+### Hasil eksperimen internal
+
+| Metrik | Hasil |
+| --- | ---: |
+| Training / validation / test | 3.283 / 737 / 732 gambar |
+| Classifier terpilih | DenseNet121 |
+| Test accuracy | 100% |
+| Test Macro F1 | 1,00 |
+| Mean Dice segmentasi | 0,8160 |
+| Mean IoU segmentasi | 0,6995 |
+| Threshold segmentasi (dipilih pada validation) | 0,40 |
+
+Ketiga kandidat (DenseNet121, ConvNeXt-Tiny, EfficientNetV2-S) mencapai validation Macro F1 1,00. DenseNet121 merupakan kandidat pertama pada hasil pemilihan dengan skor yang sama; hasil ini tidak membuktikan keunggulannya atas dua kandidat lain. Evaluasi test classifier dilakukan pada model terpilih.
+
+**Cakupan hasil:** angka di atas berasal dari test internal eksperimen tersimpan, bukan jaminan akurasi di lapangan. Uji eksternal belum dilakukan. Pengelompokan pHash membantu mengurangi kebocoran gambar serupa, tetapi tidak menjamin pemisahan semua foto dari tanaman atau sesi pengambilan yang sama. Temperature scaling dilewati karena seluruh prediksi validation benar (`temperature=1.0`).
+
+![Confusion matrix DenseNet121 pada test internal](results/plots/confusion_matrix.png)
+
+![Validation loss dan validation Macro F1 ketiga classifier](results/plots/classification_learning_curves.png)
+
+Grafik classifier menampilkan **validation loss dan validation Macro F1**, bukan training accuracy.
+
+![Train dan validation Dice segmentasi](results/plots/segmentation_learning_curves.png)
+
+Grafik segmentasi menggunakan threshold 0,5 selama training. Evaluasi final menggunakan threshold 0,40 yang dipilih pada validation, dengan metrik dihitung pada area gambar tanpa padding.
+
+| Kelas | Mean Dice | Mean IoU |
+| --- | ---: | ---: |
+| Bacterial Blight | 0,855563 | 0,753300 |
+| Blast | 0,801743 | 0,682535 |
+| Brown Spot | 0,815692 | 0,698814 |
+| Tungro | 0,789812 | 0,662569 |
+
+![Contoh prediksi, Grad-CAM++, mask, overlay, dan Canny](results/plots/prediction_example.png)
+
+Contoh foto unggahan diprediksi Blast dengan skor 81,08% dan ditandai ragu oleh classifier; contoh tersebut bukan evaluasi eksternal berlabel. Cakupan mask adalah persentase luas gambar, bukan tingkat keparahan penyakit pada daun.
+
+[Ringkasan metrik](results/metrics/test_summary.json), [classification report](results/metrics/classification_report.csv), [metrik segmentasi per kelas](results/metrics/segmentation_by_class.csv), dan [jumlah split](results/metrics/split_counts.csv) ditranskripsikan dari output notebook asli. Grafik diekstrak langsung dari output PNG notebook; tidak direkonstruksi atau dilatih ulang. Angka segmentasi per kelas tersedia sampai enam desimal pada output sumber. Riwayat per epoch dan prediksi per gambar tidak tersedia sebagai file terpisah dalam notebook unggahan.
+
+### Reproduksi training
+
+Buka notebook di Google Colab dengan GPU, unduh kedua arsip dari sumber dataset resmi, dan simpan di `MyDrive/RiceLeaf/data/`. Jalankan sel berurutan, tinjau pasangan gambar-mask, lalu konfirmasi audit visual. Konfigurasi eksperimen dan checkpoint disimpan di Google Drive; gunakan nama eksperimen baru jika konfigurasi berubah. Model menggunakan bobot pretrained ImageNet yang di-fine-tune pada dataset penyakit padi, bukan training dari nol.
+
 ## Struktur repository
 
 ```text
@@ -82,6 +129,11 @@ riceleaf/
 │   ├── classifier.pt
 │   ├── segmenter.pt
 │   └── metadata.json
+├── notebooks/
+│   └── RiceLeaf.ipynb
+├── results/
+│   ├── plots/
+│   └── metrics/
 ├── app.py
 ├── requirements.txt
 ├── runtime.txt

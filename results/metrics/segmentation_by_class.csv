@@ -1,0 +1,5 @@
+class,mean_dice,mean_iou
+bacterial_blight,0.855563,0.7533
+blast,0.801743,0.682535
+brown_spot,0.815692,0.698814
+tungro,0.789812,0.662569

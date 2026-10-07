@@ -1,0 +1,5 @@
+class,precision,recall,f1_score,support
+Bacterial Blight,1,1,1,193
+Blast,1,1,1,142
+Brown Spot,1,1,1,185
+Tungro,1,1,1,212
