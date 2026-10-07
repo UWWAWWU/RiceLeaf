@@ -2,7 +2,8 @@
 
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.6+-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.42+-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![ONNX Runtime](https://img.shields.io/badge/ONNX-Runtime-005CED)](https://onnxruntime.ai/)
+[![Vercel](https://img.shields.io/badge/Hosted_on-Vercel-black?logo=vercel)](https://riceleaf.wawutriambodo.my.id/)
 
 RiceLeaf AI adalah aplikasi web berbasis deep learning untuk mengidentifikasi dan memvisualisasikan area penyakit pada citra tanaman padi. Aplikasi memadukan model identifikasi citra, model segmentasi area penyakit, serta visualisasi Grad-CAM++ dan Canny Edge agar hasil analisis lebih mudah dipahami.
 
@@ -15,7 +16,8 @@ RiceLeaf AI adalah aplikasi web berbasis deep learning untuk mengidentifikasi da
 - Grad-CAM++ untuk menunjukkan area yang memengaruhi keputusan model identifikasi.
 - Mask segmentasi dan overlay untuk memperlihatkan prediksi lokasi penyakit.
 - Canny Edge yang dibatasi pada area hasil segmentasi penyakit.
-- Antarmuka web responsif dengan inferensi ONNX di browser. Versi Streamlit tetap tersedia untuk penggunaan lokal.
+- Antarmuka responsif dengan unggahan gambar, drag-and-drop, dan pengambilan foto melalui kamera.
+- Inferensi ONNX di browser; foto tidak dikirim ke server untuk analisis.
 
 ## Kelas penyakit
 
@@ -51,7 +53,7 @@ flowchart LR
     G --> H[Canny pada area penyakit]
 ```
 
-Arsitektur classifier yang digunakan saat deployment, parameter normalisasi, threshold segmentasi, dan konfigurasi inferensi disimpan di `model/metadata.json`. Dengan demikian, aplikasi selalu menggunakan preprocessing yang sama dengan proses evaluasi model.
+Arsitektur classifier yang digunakan saat deployment, parameter normalisasi, threshold segmentasi, dan konfigurasi inferensi disimpan di `models/metadata.json`. Versi web menjalankan model melalui ONNX Runtime Web. Visualisasi Grad-CAM++ di browser menggunakan feature map dan bobot classifier yang diekspor; implementasinya berbeda dari autograd PyTorch pada notebook.
 
 ## Dataset dan pemrosesan data
 
@@ -113,7 +115,7 @@ Grafik segmentasi menggunakan threshold 0,5 selama training. Evaluasi final meng
 
 Contoh foto unggahan diprediksi Blast dengan skor 81,08% dan ditandai ragu oleh classifier; contoh tersebut bukan evaluasi eksternal berlabel. Cakupan mask adalah persentase luas gambar, bukan tingkat keparahan penyakit pada daun.
 
-[Ringkasan metrik](results/metrics/test_summary.json), [classification report](results/metrics/classification_report.csv), [metrik segmentasi per kelas](results/metrics/segmentation_by_class.csv), dan [jumlah split](results/metrics/split_counts.csv) ditranskripsikan dari output notebook asli. Grafik diekstrak langsung dari output PNG notebook; tidak direkonstruksi atau dilatih ulang. Angka segmentasi per kelas tersedia sampai enam desimal pada output sumber. Riwayat per epoch dan prediksi per gambar tidak tersedia sebagai file terpisah dalam notebook unggahan.
+Hasil evaluasi tersedia dalam [ringkasan metrik](results/metrics/test_summary.json), [classification report](results/metrics/classification_report.csv), [metrik segmentasi per kelas](results/metrics/segmentation_by_class.csv), dan [jumlah split](results/metrics/split_counts.csv). Angka tersebut bersumber dari output eksperimen pada notebook.
 
 ### Reproduksi training
 
@@ -128,73 +130,29 @@ StratifiedGroupKFold menggunakan 20 fold: tiga untuk test, tiga untuk validation
 ## Struktur repository
 
 ```text
-riceleaf/
-├── .streamlit/
-│   └── config.toml
-├── model/
-│   ├── classifier.pt
-│   ├── segmenter.pt
-│   └── metadata.json
-├── notebooks/
-│   └── RiceLeaf.ipynb
-├── results/
-│   ├── plots/
-│   └── metrics/
-├── app.py
-├── requirements.txt
-├── runtime.txt
-└── README.md
+RiceLeaf/
+├── index.html              # Halaman aplikasi
+├── app.js                  # Inferensi dan visualisasi di browser
+├── style.css               # Tampilan responsif
+├── models/                 # Model ONNX dan metadata
+├── runtime/                # ONNX Runtime Web
+├── images/                 # Aset antarmuka
+├── notebooks/RiceLeaf.ipynb # Training dan evaluasi
+├── results/                # Grafik dan metrik eksperimen
+└── vercel.json             # Konfigurasi hosting
 ```
-
-Seluruh file yang diperlukan aplikasi berada di repository. Tidak diperlukan akses ke Google Drive atau direktori Colab milik pengembang.
 
 ## Menjalankan secara lokal
 
-### 1. Clone repository
-
 ```bash
-git clone https://github.com/UWWAWWU/riceleaf.git
-cd riceleaf
+git clone https://github.com/UWWAWWU/RiceLeaf.git
+cd RiceLeaf
+python -m http.server 8000
 ```
 
-### 2. Buat virtual environment
+Buka `http://localhost:8000`. Analisis pertama mengunduh model sekitar 133 MB dan runtime WebAssembly; kecepatannya bergantung pada koneksi serta perangkat. Kamera memerlukan izin browser dan konteks aman (HTTPS atau localhost).
 
-```bash
-python -m venv .venv
-```
-
-Aktifkan environment pada Windows:
-
-```powershell
-.venv\Scripts\activate
-```
-
-Aktifkan environment pada Linux atau macOS:
-
-```bash
-source .venv/bin/activate
-```
-
-### 3. Instal dependensi dan jalankan aplikasi
-
-```bash
-pip install -r requirements.txt
-streamlit run app.py
-```
-
-Aplikasi lokal akan tersedia di `http://localhost:8501`.
-
-## Deployment
-
-Repository ini dapat langsung dihubungkan ke Streamlit Community Cloud dengan konfigurasi berikut:
-
-| Pengaturan | Nilai |
-| --- | --- |
-| Repository | `UWWAWWU/riceleaf` |
-| Branch | `main` |
-| Main file path | `app.py` |
-
-Setiap perubahan yang di-push ke branch `main` akan memicu pembaruan aplikasi secara otomatis.
+Model ONNX disimpan dalam beberapa bagian agar ukuran setiap file tetap terkendali, lalu digabungkan di browser saat inisialisasi. [Manifest model](models/manifest.json) mencatat ukuran dan checksum masing-masing bagian.
 
 ## Ruang lingkup penggunaan
 
@@ -207,9 +165,13 @@ Model dikembangkan untuk empat kelas penyakit yang tercantum di atas dan belum m
 - Segmentation Models PyTorch
 - Grad-CAM++
 - OpenCV
-- Streamlit
+- ONNX Runtime Web
+- JavaScript, HTML, dan CSS
+- Vercel
 
 ## Atribusi
+
+ONNX Runtime Web dikembangkan oleh Microsoft dan didistribusikan dengan lisensi MIT; pemberitahuan lisensinya disertakan dalam `runtime/LICENSE`.
 
 Dataset yang digunakan tersedia dengan lisensi **CC BY 4.0** pada halaman sumber masing-masing. Penggunaan ulang dataset atau model perlu mempertahankan atribusi kepada penyedia dataset dan mematuhi ketentuan lisensi komponen pretrained yang digunakan.
 

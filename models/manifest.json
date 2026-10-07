@@ -1,0 +1,56 @@
+{
+  "format": "onnx-chunks",
+  "chunk_size_bytes": 20000000,
+  "models": {
+    "classifier": {
+      "size_bytes": 28228924,
+      "parts": [
+        {
+          "file": "classifier.part-00",
+          "size_bytes": 20000000,
+          "sha256": "0c99ff6d882d2d42a2d15e6bca73d222241fa65d0b6bfbc27229095b4c75f28b"
+        },
+        {
+          "file": "classifier.part-01",
+          "size_bytes": 8228924,
+          "sha256": "cbd1f29e06ca11bcef9368836b1a96877e2e4eb6975a719c3935f2401325ffbf"
+        }
+      ]
+    },
+    "segmenter": {
+      "size_bytes": 104308306,
+      "parts": [
+        {
+          "file": "segmenter.part-00",
+          "size_bytes": 20000000,
+          "sha256": "e8f9ec746a2a330c3ba719cd80d83c0b0738acedbc2b8082b07031106b7a51d8"
+        },
+        {
+          "file": "segmenter.part-01",
+          "size_bytes": 20000000,
+          "sha256": "93b57f4ef5998dc3465dddd5c84541c287799e5fa503fb4aeee3a05ebf59a8a5"
+        },
+        {
+          "file": "segmenter.part-02",
+          "size_bytes": 20000000,
+          "sha256": "881f9c958244951e570773d0956d30cb09d3db614aa6b0d2349fb6eb0a505e61"
+        },
+        {
+          "file": "segmenter.part-03",
+          "size_bytes": 20000000,
+          "sha256": "a491889dfde51e33a02b2435e0103431fe51c74b2d5a0a3b91e88e7401655dc5"
+        },
+        {
+          "file": "segmenter.part-04",
+          "size_bytes": 20000000,
+          "sha256": "57f1f09006c2803c3e831354d4e55658c26969d2df9ca3074928d822b617947e"
+        },
+        {
+          "file": "segmenter.part-05",
+          "size_bytes": 4308306,
+          "sha256": "c017f9dc7afbcbe29ad366c73716d6cf2050db838fa805c0a39f24f807884ea8"
+        }
+      ]
+    }
+  }
+}
