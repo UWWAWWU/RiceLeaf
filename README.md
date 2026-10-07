@@ -74,7 +74,7 @@ Distribusi citra setelah penghapusan duplikat identik:
 
 ## Training dan evaluasi
 
-[Notebook training dan evaluasi](notebooks/RiceLeaf.ipynb) memuat audit dataset, split berdasarkan kelompok pHash, fine-tuning tiga kandidat classifier, training U-Net++, dan ekspor model. Output ilmiah asli dipertahankan; log instalasi, progress bar, dan metadata sesi dibersihkan.
+[Notebook training dan evaluasi](notebooks/RiceLeaf.ipynb) memuat audit dataset, split berdasarkan kelompok pHash, fine-tuning tiga kandidat classifier, training U-Net++, dan ekspor model. Notebook menyertakan tabel evaluasi, grafik pembelajaran, dan contoh visualisasi prediksi.
 
 ### Hasil eksperimen internal
 
