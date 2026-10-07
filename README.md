@@ -6,7 +6,7 @@
 
 RiceLeaf AI adalah aplikasi web berbasis deep learning untuk mengidentifikasi dan memvisualisasikan area penyakit pada citra tanaman padi. Aplikasi memadukan model identifikasi citra, model segmentasi area penyakit, serta visualisasi Grad-CAM++ dan Canny Edge agar hasil analisis lebih mudah dipahami.
 
-**Aplikasi:** [riceleaf-ai.streamlit.app](https://riceleaf-ai.streamlit.app/)
+**Aplikasi:** [riceleaf.wawutriambodo.my.id](https://riceleaf.wawutriambodo.my.id/)
 
 ## Fitur utama
 
@@ -15,7 +15,7 @@ RiceLeaf AI adalah aplikasi web berbasis deep learning untuk mengidentifikasi da
 - Grad-CAM++ untuk menunjukkan area yang memengaruhi keputusan model identifikasi.
 - Mask segmentasi dan overlay untuk memperlihatkan prediksi lokasi penyakit.
 - Canny Edge yang dibatasi pada area hasil segmentasi penyakit.
-- Antarmuka web responsif berbasis Streamlit.
+- Antarmuka web responsif dengan inferensi ONNX di browser. Versi Streamlit tetap tersedia untuk penggunaan lokal.
 
 ## Kelas penyakit
 
