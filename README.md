@@ -74,7 +74,7 @@ Distribusi citra setelah penghapusan duplikat identik:
 
 ## Training dan evaluasi
 
-[Notebook training dan evaluasi](notebooks/RiceLeaf.ipynb) memuat audit dataset, split berdasarkan kelompok pHash, fine-tuning tiga kandidat classifier, training U-Net++, dan ekspor model. Notebook menyertakan tabel evaluasi, grafik pembelajaran, dan contoh visualisasi prediksi.
+[Notebook training dan evaluasi](notebooks/RiceLeaf.ipynb) memuat audit dataset, split berdasarkan kelompok pHash, fine-tuning tiga kandidat classifier, training U-Net++, dan ekspor model. Notebook berisi kode dan output eksperimen: tabel evaluasi, grafik pembelajaran, dan contoh visualisasi prediksi. Penjelasan proyek, metode, hasil, dan batasan tersedia dalam README ini.
 
 ### Hasil eksperimen internal
 
@@ -118,6 +118,12 @@ Contoh foto unggahan diprediksi Blast dengan skor 81,08% dan ditandai ragu oleh 
 ### Reproduksi training
 
 Buka notebook di Google Colab dengan GPU, unduh kedua arsip dari sumber dataset resmi, dan simpan di `MyDrive/RiceLeaf/data/`. Jalankan sel berurutan, tinjau pasangan gambar-mask, lalu konfirmasi audit visual. Konfigurasi eksperimen dan checkpoint disimpan di Google Drive; gunakan nama eksperimen baru jika konfigurasi berubah. Model menggunakan bobot pretrained ImageNet yang di-fine-tune pada dataset penyakit padi, bukan training dari nol.
+
+### Konfigurasi eksperimen
+
+Input citra berukuran 320 × 320 piksel dengan letterbox dan normalisasi ImageNet. Augmentasi training meliputi flip, rotasi ringan, brightness, contrast, dan saturation. Training menggunakan AdamW, learning rate awal 0,0001, cosine scheduling, batch size 8, gradient accumulation 2, maksimum 30 epoch, patience 7, dan seed 42. Classifier dioptimalkan dengan cross-entropy dan label smoothing 0,05; segmenter memakai binary cross-entropy dan Dice loss. Mixed precision dan gradient clipping digunakan selama training.
+
+StratifiedGroupKFold menggunakan 20 fold: tiga untuk test, tiga untuk validation, dan sisanya training. Checkpoint dipilih berdasarkan validation Macro F1 atau Dice. Mask dipasangkan berdasarkan nama file dan kelas, lalu diperiksa ukuran, grayscale, dan polaritasnya. Ekspor menyertakan bobot, konfigurasi preprocessing, threshold, versi pustaka, dan checksum; prediksi diperiksa kembali setelah reload bobot.
 
 ## Struktur repository
 
