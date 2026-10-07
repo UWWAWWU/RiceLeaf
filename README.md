@@ -1,148 +1,97 @@
 # RiceLeaf AI
 
-[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.6+-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
-[![ONNX Runtime](https://img.shields.io/badge/ONNX-Runtime-005CED)](https://onnxruntime.ai/)
-[![Vercel](https://img.shields.io/badge/Hosted_on-Vercel-black?logo=vercel)](https://riceleaf.wawutriambodo.my.id/)
+RiceLeaf AI identifies four rice leaf diseases and visualizes the areas associated with each prediction. It combines a DenseNet121 classifier with a U-Net++ segmentation model in a responsive web application that runs inference directly in the browser.
 
-RiceLeaf AI adalah aplikasi web berbasis deep learning untuk mengidentifikasi dan memvisualisasikan area penyakit pada citra tanaman padi. Aplikasi memadukan model identifikasi citra, model segmentasi area penyakit, serta visualisasi Grad-CAM++ dan Canny Edge agar hasil analisis lebih mudah dipahami.
+**[Try RiceLeaf AI](https://riceleaf.wawutriambodo.my.id/)** · **[Training notebook](notebooks/RiceLeaf.ipynb)**
 
-**Aplikasi:** [riceleaf.wawutriambodo.my.id](https://riceleaf.wawutriambodo.my.id/)
+![RiceLeaf web application](images/app-preview.jpg)
 
-## Fitur utama
+## Features
 
-- Identifikasi empat penyakit tanaman padi dari citra JPG, JPEG, atau PNG.
-- Skor probabilitas untuk seluruh kelas penyakit.
-- Grad-CAM++ untuk menunjukkan area yang memengaruhi keputusan model identifikasi.
-- Mask segmentasi dan overlay untuk memperlihatkan prediksi lokasi penyakit.
-- Canny Edge yang dibatasi pada area hasil segmentasi penyakit.
-- Antarmuka responsif dengan unggahan gambar, drag-and-drop, dan pengambilan foto melalui kamera.
-- Inferensi ONNX di browser; foto tidak dikirim ke server untuk analisis.
+- Upload JPG or PNG images, drag and drop a photo, or capture one with a camera.
+- Compare probabilities for Bacterial Blight, Blast, Brown Spot, and Tungro.
+- Explore the original image, activation heatmap, predicted mask, overlay, and edges.
+- Review low-confidence predictions using the threshold selected during validation.
+- Track model download progress and receive specific feedback when an operation fails.
+- Analyze images locally in the browser; photos are not uploaded for inference.
 
-## Kelas penyakit
+Affected area measures the percentage of the **entire image** covered by the predicted mask. It does not measure the percentage of diseased leaf tissue or disease severity.
 
-| Kelas | Nama pada aplikasi |
+![Classification result and activation heatmap](images/result-preview.jpg)
+
+## Models and inference
+
+| Component | Implementation |
 | --- | --- |
-| `bacterial_blight` | Bacterial Blight |
-| `blast` | Blast |
-| `brown_spot` | Brown Spot |
-| `tungro` | Tungro |
+| Classification | DenseNet121, selected from DenseNet121, ConvNeXt-Tiny, and EfficientNetV2-S |
+| Segmentation | U-Net++ with a ResNet34 encoder |
+| Input | 320 × 320 pixels, letterbox padding and ImageNet normalization |
+| Segmentation threshold | 0.40, selected on validation data |
+| Confidence review threshold | Approximately 84.6%, stored in model metadata |
+| Browser runtime | ONNX Runtime Web with WebAssembly |
 
-## Arsitektur model
+The notebook fine-tunes ImageNet-pretrained networks and evaluates the PyTorch models. The web application uses exported ONNX models with the same input size, normalization, padding color, class order, temperature, and decision thresholds. Browser and Pillow image resizing can produce small numerical differences.
 
-RiceLeaf AI menggunakan dua model yang bekerja pada citra berukuran **320 × 320 piksel**:
+The notebook computes Grad-CAM++ with PyTorch autograd. The browser computes an activation heatmap from exported feature maps and classifier weights using a Grad-CAM++-style weighting approximation. It is displayed as **Heatmap** and should not be interpreted as pixel-identical to the notebook visualization. The web edge view filters Canny edges using the predicted mask; the original notebook example displays all image edges.
 
-| Komponen | Fungsi | Implementasi |
-| --- | --- | --- |
-| Classifier | Menentukan kelas penyakit | CNN hasil transfer learning; arsitektur terbaik dipilih berdasarkan validation Macro F1 dari DenseNet121, ConvNeXt-Tiny, dan EfficientNetV2-S |
-| Segmenter | Memprediksi area penyakit | U-Net++ dengan encoder ResNet34 |
-| Kalibrasi | Mengatur probabilitas keluaran classifier | Temperature scaling menggunakan data validasi |
-| Explainability | Menjelaskan fokus keputusan classifier | Grad-CAM++ |
-| Visualisasi tepi | Menampilkan struktur tepi pada area prediksi penyakit | Canny Edge yang difilter menggunakan mask segmentasi |
+Model configuration is stored in [metadata](models/metadata.json). The [model manifest](models/manifest.json) records the size and SHA-256 checksum of every model chunk; the application validates these before initializing the models.
 
-Alur inferensi:
+## Data and training
 
-```mermaid
-flowchart LR
-    A[Foto tanaman padi] --> B[Letterbox 320 × 320]
-    B --> C[Classifier]
-    B --> D[U-Net++ Segmenter]
-    C --> E[Prediksi dan probabilitas]
-    C --> F[Grad-CAM++]
-    D --> G[Mask dan overlay]
-    G --> H[Canny pada area penyakit]
-```
+The project uses two public datasets:
 
-Arsitektur classifier yang digunakan saat deployment, parameter normalisasi, threshold segmentasi, dan konfigurasi inferensi disimpan di `models/metadata.json`. Versi web menjalankan model melalui ONNX Runtime Web. Visualisasi Grad-CAM++ di browser menggunakan feature map dan bobot classifier yang diekspor; implementasinya berbeda dari autograd PyTorch pada notebook.
+- [Rice Leaf Disease Image Samples, Mendeley Data v2](https://doi.org/10.17632/fwcj7stb8r.2) for classification.
+- [RiceSeg-5932, Mendeley Data v1](https://doi.org/10.17632/92jc6w6mcy.1) for segmentation.
 
-## Dataset dan pemrosesan data
+Data preparation checks image integrity, corrects EXIF orientation, removes exact duplicates, and groups similar images using perceptual hashes. Group-based splitting reduces overlap between training, validation, and test images.
 
-Model dikembangkan menggunakan dua dataset publik:
-
-1. [Rice Leaf Disease Image Samples, Mendeley Data v2](https://doi.org/10.17632/fwcj7stb8r.2) untuk identifikasi penyakit.
-2. [RiceSeg-5932, Mendeley Data v1](https://doi.org/10.17632/92jc6w6mcy.1) untuk segmentasi area penyakit.
-
-Tahap persiapan data mencakup pemeriksaan file rusak, koreksi orientasi EXIF, penghapusan duplikat identik, dan pengelompokan citra serupa menggunakan perceptual hash. Pembagian training, validation, dan testing dilakukan berdasarkan kelompok agar citra duplikat atau sangat mirip tidak tersebar ke split yang berbeda.
-
-Distribusi citra setelah penghapusan duplikat identik:
-
-| Kelas | Jumlah citra |
+| Class | Images after deduplication |
 | --- | ---: |
-| Bacterial Blight | 1.284 |
+| Bacterial Blight | 1,284 |
 | Blast | 960 |
-| Brown Spot | 1.200 |
-| Tungro | 1.308 |
-| **Total** | **4.752** |
+| Brown Spot | 1,200 |
+| Tungro | 1,308 |
+| **Total** | **4,752** |
 
-## Training dan evaluasi
+Training uses AdamW with an initial learning rate of 0.0001, cosine scheduling, batch size 8, gradient accumulation 2, up to 30 epochs, early-stopping patience 7, and seed 42. Augmentations include flips, small rotations, brightness, contrast, and saturation changes. Classification uses cross-entropy with label smoothing 0.05; segmentation uses binary cross-entropy and Dice loss. Mixed precision and gradient clipping are enabled.
 
-[Notebook training dan evaluasi](notebooks/RiceLeaf.ipynb) memuat audit dataset, split berdasarkan kelompok pHash, fine-tuning tiga kandidat classifier, training U-Net++, dan ekspor model. Notebook berisi kode dan output eksperimen: tabel evaluasi, grafik pembelajaran, dan contoh visualisasi prediksi. Penjelasan proyek, metode, hasil, dan batasan tersedia dalam README ini.
+StratifiedGroupKFold uses 20 folds: three for testing, three for validation, and the remainder for training. Checkpoints are selected by validation Macro F1 or Dice. Image-mask pairs are audited for dimensions, grayscale encoding, and mask polarity before segmentation training.
 
-### Hasil eksperimen internal
+## Evaluation
 
-| Metrik | Hasil |
+These results come from the saved **internal test experiment**. No external labeled evaluation has been completed.
+
+| Metric | Result |
 | --- | ---: |
-| Training / validation / test | 3.283 / 737 / 732 gambar |
-| Classifier terpilih | DenseNet121 |
+| Training / validation / test images | 3,283 / 737 / 732 |
+| Selected classifier | DenseNet121 |
 | Test accuracy | 100% |
-| Test Macro F1 | 1,00 |
-| Mean Dice segmentasi | 0,8160 |
-| Mean IoU segmentasi | 0,6995 |
-| Threshold segmentasi (dipilih pada validation) | 0,40 |
+| Test Macro F1 | 1.00 |
+| Mean segmentation Dice | 0.8160 |
+| Mean segmentation IoU | 0.6995 |
 
-Ketiga kandidat (DenseNet121, ConvNeXt-Tiny, EfficientNetV2-S) mencapai validation Macro F1 1,00. DenseNet121 merupakan kandidat pertama pada hasil pemilihan dengan skor yang sama; hasil ini tidak membuktikan keunggulannya atas dua kandidat lain. Evaluasi test classifier dilakukan pada model terpilih.
+All three classifier candidates achieved validation Macro F1 of 1.00. DenseNet121 was the first candidate selected in this tie; the experiment does not establish that it outperforms the other candidates. Temperature scaling was skipped because all validation predictions were correct, leaving `temperature=1.0`.
 
-**Cakupan hasil:** angka di atas berasal dari test internal eksperimen tersimpan, bukan jaminan akurasi di lapangan. Uji eksternal belum dilakukan. Pengelompokan pHash membantu mengurangi kebocoran gambar serupa, tetapi tidak menjamin pemisahan semua foto dari tanaman atau sesi pengambilan yang sama. Temperature scaling dilewati karena seluruh prediksi validation benar (`temperature=1.0`).
+![Internal test confusion matrix](results/plots/confusion_matrix.png)
 
-![Confusion matrix DenseNet121 pada test internal](results/plots/confusion_matrix.png)
+![Classifier validation loss and Macro F1](results/plots/classification_learning_curves.png)
 
-![Validation loss dan validation Macro F1 ketiga classifier](results/plots/classification_learning_curves.png)
+The classifier curves show validation loss and validation Macro F1. The segmentation learning curves use threshold 0.5 during training; final evaluation uses threshold 0.40 and excludes letterbox padding.
 
-Grafik classifier menampilkan **validation loss dan validation Macro F1**, bukan training accuracy.
+![Segmentation learning curves](results/plots/segmentation_learning_curves.png)
 
-![Train dan validation Dice segmentasi](results/plots/segmentation_learning_curves.png)
-
-Grafik segmentasi menggunakan threshold 0,5 selama training. Evaluasi final menggunakan threshold 0,40 yang dipilih pada validation, dengan metrik dihitung pada area gambar tanpa padding.
-
-| Kelas | Mean Dice | Mean IoU |
+| Class | Mean Dice | Mean IoU |
 | --- | ---: | ---: |
-| Bacterial Blight | 0,855563 | 0,753300 |
-| Blast | 0,801743 | 0,682535 |
-| Brown Spot | 0,815692 | 0,698814 |
-| Tungro | 0,789812 | 0,662569 |
+| Bacterial Blight | 0.855563 | 0.753300 |
+| Blast | 0.801743 | 0.682535 |
+| Brown Spot | 0.815692 | 0.698814 |
+| Tungro | 0.789812 | 0.662569 |
 
-![Contoh prediksi, Grad-CAM++, mask, overlay, dan Canny](results/plots/prediction_example.png)
+[Metric summary](results/metrics/test_summary.json) · [Classification report](results/metrics/classification_report.csv) · [Segmentation metrics](results/metrics/segmentation_by_class.csv) · [Split counts](results/metrics/split_counts.csv)
 
-Contoh foto unggahan diprediksi Blast dengan skor 81,08% dan ditandai ragu oleh classifier; contoh tersebut bukan evaluasi eksternal berlabel. Cakupan mask adalah persentase luas gambar, bukan tingkat keparahan penyakit pada daun.
+The notebook retains the original experiment outputs. Similar-image grouping reduces potential leakage but cannot guarantee separation of every image from the same plant or capture session. Internal accuracy should not be treated as expected field performance.
 
-Hasil evaluasi tersedia dalam [ringkasan metrik](results/metrics/test_summary.json), [classification report](results/metrics/classification_report.csv), [metrik segmentasi per kelas](results/metrics/segmentation_by_class.csv), dan [jumlah split](results/metrics/split_counts.csv). Angka tersebut bersumber dari output eksperimen pada notebook.
-
-### Reproduksi training
-
-Buka notebook di Google Colab dengan GPU, unduh kedua arsip dari sumber dataset resmi, dan simpan di `MyDrive/RiceLeaf/data/`. Jalankan sel berurutan, tinjau pasangan gambar-mask, lalu konfirmasi audit visual. Konfigurasi eksperimen dan checkpoint disimpan di Google Drive; gunakan nama eksperimen baru jika konfigurasi berubah. Model menggunakan bobot pretrained ImageNet yang di-fine-tune pada dataset penyakit padi, bukan training dari nol.
-
-### Konfigurasi eksperimen
-
-Input citra berukuran 320 × 320 piksel dengan letterbox dan normalisasi ImageNet. Augmentasi training meliputi flip, rotasi ringan, brightness, contrast, dan saturation. Training menggunakan AdamW, learning rate awal 0,0001, cosine scheduling, batch size 8, gradient accumulation 2, maksimum 30 epoch, patience 7, dan seed 42. Classifier dioptimalkan dengan cross-entropy dan label smoothing 0,05; segmenter memakai binary cross-entropy dan Dice loss. Mixed precision dan gradient clipping digunakan selama training.
-
-StratifiedGroupKFold menggunakan 20 fold: tiga untuk test, tiga untuk validation, dan sisanya training. Checkpoint dipilih berdasarkan validation Macro F1 atau Dice. Mask dipasangkan berdasarkan nama file dan kelas, lalu diperiksa ukuran, grayscale, dan polaritasnya. Ekspor menyertakan bobot, konfigurasi preprocessing, threshold, versi pustaka, dan checksum; prediksi diperiksa kembali setelah reload bobot.
-
-## Struktur repository
-
-```text
-RiceLeaf/
-├── index.html              # Halaman aplikasi
-├── app.js                  # Inferensi dan visualisasi di browser
-├── style.css               # Tampilan responsif
-├── models/                 # Model ONNX dan metadata
-├── runtime/                # ONNX Runtime Web
-├── images/                 # Aset antarmuka
-├── notebooks/RiceLeaf.ipynb # Training dan evaluasi
-├── results/                # Grafik dan metrik eksperimen
-└── vercel.json             # Konfigurasi hosting
-```
-
-## Menjalankan secara lokal
+## Run locally
 
 ```bash
 git clone https://github.com/UWWAWWU/RiceLeaf.git
@@ -150,31 +99,25 @@ cd RiceLeaf
 python -m http.server 8000
 ```
 
-Buka `http://localhost:8000`. Analisis pertama mengunduh model sekitar 133 MB dan runtime WebAssembly; kecepatannya bergantung pada koneksi serta perangkat. Kamera memerlukan izin browser dan konteks aman (HTTPS atau localhost).
+Open `http://localhost:8000`. The first analysis loads approximately 133 MB of models plus the WebAssembly runtime. Download and initialization time depend on the connection and device. Camera capture requires permission and HTTPS or localhost.
 
-Model ONNX disimpan dalam beberapa bagian agar ukuran setiap file tetap terkendali, lalu digabungkan di browser saat inisialisasi. [Manifest model](models/manifest.json) mencatat ukuran dan checksum masing-masing bagian.
+To reproduce training, open [RiceLeaf.ipynb](notebooks/RiceLeaf.ipynb) in Google Colab with a GPU. Place the dataset archives in `MyDrive/RiceLeaf/data/`, run the cells in order, and confirm the image-mask audit. Use a new experiment name when changing the configuration.
 
-## Ruang lingkup penggunaan
+## Repository guide
 
-Model dikembangkan untuk empat kelas penyakit yang tercantum di atas dan belum memiliki kelas daun sehat maupun mekanisme khusus untuk menolak gambar selain tanaman padi. Mask segmentasi merupakan prediksi model, sedangkan Grad-CAM++ menunjukkan area perhatian classifier dan bukan batas penyakit yang terverifikasi. Hasil aplikasi ditujukan sebagai demonstrasi penelitian dan bantuan analisis citra, bukan pengganti pemeriksaan ahli pertanian.
+| Location | Contents |
+| --- | --- |
+| `index.html`, `style.css` | Responsive application interface |
+| `app.js` | Model loading, inference, and visualizations |
+| `models/` | ONNX model chunks, metadata, and integrity manifest |
+| `runtime/` | ONNX Runtime Web and license notice |
+| `notebooks/` | Training and evaluation code with experiment outputs |
+| `results/` | Evaluation plots and machine-readable metrics |
+| `images/` | Interface assets and application preview |
+| `vercel.json` | Static hosting configuration |
 
-## Teknologi
+## Scope and attribution
 
-- Python
-- PyTorch dan Torchvision
-- Segmentation Models PyTorch
-- Grad-CAM++
-- OpenCV
-- ONNX Runtime Web
-- JavaScript, HTML, dan CSS
-- Vercel
+The models support four disease classes. They do not include a healthy-leaf class or a dedicated detector for unrelated images. The segmentation mask is a model prediction; the activation heatmap indicates classifier attention. This project demonstrates image analysis and does not replace an agricultural expert's assessment.
 
-## Atribusi
-
-ONNX Runtime Web dikembangkan oleh Microsoft dan didistribusikan dengan lisensi MIT; pemberitahuan lisensinya disertakan dalam `runtime/LICENSE`.
-
-Dataset yang digunakan tersedia dengan lisensi **CC BY 4.0** pada halaman sumber masing-masing. Penggunaan ulang dataset atau model perlu mempertahankan atribusi kepada penyedia dataset dan mematuhi ketentuan lisensi komponen pretrained yang digunakan.
-
----
-
-RiceLeaf AI • Model identifikasi dan segmentasi citra tanaman padi
+The datasets are published under CC BY 4.0 on their source pages. Retain dataset attribution and observe the terms of pretrained components when reusing the work. ONNX Runtime Web is distributed under the MIT license; its notice is included in [runtime/LICENSE](runtime/LICENSE).

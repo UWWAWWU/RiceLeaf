@@ -24,9 +24,11 @@ const diseaseDetails = {
   }
 };
 let file, images, modelInfo, sessions, cameraStream, torchOn=false, qualityWarning='', analyzing=false;
+let stage='image';
 const status = (message,error=false) => { $('status').textContent=message; $('status').classList.toggle('error',error); };
 function busy(active){
   analyzing=active;
+  $('loading-bar').classList.remove('determinate');
   $('loading-spinner').hidden=!active;
   $('loading-bar').hidden=!active;
   $('analyze-label').textContent=active?'Analyzing...':'Analyze image';
@@ -68,7 +70,7 @@ async function choose(f){
     if(file!==f)return;
     qualityWarning=warning;$('quality-note').textContent=warning;$('quality-note').hidden=!warning;
     $('analyze').disabled=false;status('Image ready for analysis.');
-  }catch(err){if(file!==f)return;console.error(err);file=undefined;status('This image could not be opened. Choose another JPG or PNG photo.',true);}
+  }catch(err){if(file!==f)return;console.error(err);file=undefined;$('selected').hidden=true;URL.revokeObjectURL($('thumb').src);$('thumb').removeAttribute('src');status('This image could not be opened. Choose another JPG or PNG photo.',true);}
 }
 $('file').addEventListener('change',e=>choose(e.target.files[0]));
 $('camera-file').addEventListener('change',e=>{const photo=e.target.files[0];$('camera-file').value='';choose(photo);});
@@ -133,34 +135,76 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden&&cameraStre
 const zone=$('dropzone'); zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('over');});zone.addEventListener('dragleave',()=>zone.classList.remove('over'));zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('over');choose(e.dataTransfer.files[0]);});
 $('tabs').onclick=e=>{const button=e.target.closest('[data-tab]');if(!button||!images)return;document.querySelectorAll('[data-tab]').forEach(el=>el.classList.toggle('active',el===button));draw(button.dataset.tab);};
 
-async function loadModels(){
-  if(sessions)return sessions;
-  status('Preparing models for the first analysis. This may take a moment...');
-  ort.env.wasm.wasmPaths = new URL('./runtime/',import.meta.url).href;
-  ort.env.wasm.numThreads = 1;
-  const meta = await (await fetch('./models/metadata.json')).json();
-  const classifier = await ort.InferenceSession.create(await modelBytes('classifier',2),{executionProviders:['wasm']});
-  status('Classifier ready. Preparing the segmentation model...');
-  const segmenter = await ort.InferenceSession.create(await modelBytes('segmenter',6),{executionProviders:['wasm']});
-  modelInfo=meta; sessions={classifier,segmenter};return sessions;
+async function fetchAsset(path){
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),90000);
+  try{
+    const response=await fetch(path,{signal:controller.signal});
+    if(!response.ok)throw new Error(`Asset request failed (${response.status}): ${path}`);
+    return await response.json();
+  }finally{clearTimeout(timeout);}
 }
 
-async function modelBytes(name,count){
-  const buffers=[];let length=0;
-  for(let i=0;i<count;i++){
-    status(`Downloading ${name} model (${i+1} of ${count})...`);
-    const response=await fetch(`./models/${name}.part-${String(i).padStart(2,'0')}`);
-    if(!response.ok)throw new Error(`Could not download ${name} (${response.status})`);
-    const buffer=await response.arrayBuffer();buffers.push(new Uint8Array(buffer));length+=buffer.byteLength;
+async function loadModels(){
+  if(sessions)return sessions;
+  stage='download';
+  status('Preparing models for the first analysis...');
+  ort.env.wasm.wasmPaths = new URL('./runtime/',import.meta.url).href;
+  ort.env.wasm.numThreads = 1;
+  const meta=await fetchAsset('./models/metadata.json');
+  const manifest=await fetchAsset('./models/manifest.json');
+  const total=Object.values(manifest.models).reduce((n,m)=>n+m.size_bytes,0);
+  let downloaded=0;
+  const progress=(name,received)=>{
+    const percentage=Math.min(100,Math.round((downloaded+received)/total*100));
+    status(`Downloading ${name}: ${((downloaded+received)/1e6).toFixed(1)} / ${(total/1e6).toFixed(1)} MB (${percentage}%)`);
+    $('loading-bar').classList.add('determinate');
+    $('loading-bar').style.setProperty('--progress',`${percentage}%`);
+  };
+  const classifierBytes=await modelBytes('classifier',manifest.models.classifier,n=>progress('classifier',n));
+  downloaded+=classifierBytes.byteLength;
+  stage='initialization';status('Starting the classification model...');
+  $('loading-bar').classList.remove('determinate');
+  const classifier=await ort.InferenceSession.create(classifierBytes,{executionProviders:['wasm']});
+  try{
+    stage='download';
+    const segmenterBytes=await modelBytes('segmenter',manifest.models.segmenter,n=>progress('segmenter',n));
+    stage='initialization';status('Starting the segmentation model...');
+    $('loading-bar').classList.remove('determinate');
+    const segmenter=await ort.InferenceSession.create(segmenterBytes,{executionProviders:['wasm']});
+    modelInfo=meta;sessions={classifier,segmenter};return sessions;
+  }catch(err){await classifier.release();throw err;}
+}
+
+async function modelBytes(name,model,onProgress){
+  const bytes=new Uint8Array(model.size_bytes);let offset=0;
+  for(const part of model.parts){
+    const controller=new AbortController();let timeout;
+    const resetTimeout=()=>{clearTimeout(timeout);timeout=setTimeout(()=>controller.abort(),90000);};
+    resetTimeout();
+    try{
+      const response=await fetch(`./models/${part.file}`,{signal:controller.signal});
+      if(!response.ok)throw new Error(`Could not download ${name} (${response.status})`);
+      const reader=response.body.getReader();let received=0;
+      while(true){
+        const {done,value}=await reader.read();if(done)break;
+        resetTimeout();
+        if(received+value.byteLength>part.size_bytes){await reader.cancel();throw new Error('Unexpected model size');}
+        bytes.set(value,offset+received);received+=value.byteLength;onProgress(offset+received);
+      }
+      if(received!==part.size_bytes)throw new Error('Incomplete model download');
+      const digest=await crypto.subtle.digest('SHA-256',bytes.subarray(offset,offset+received));
+      const checksum=Array.from(new Uint8Array(digest),v=>v.toString(16).padStart(2,'0')).join('');
+      if(checksum!==part.sha256)throw new Error('Model checksum mismatch');
+      offset+=received;
+    }finally{clearTimeout(timeout);}
   }
-  const bytes=new Uint8Array(length);let offset=0;
-  for(const buffer of buffers){bytes.set(buffer,offset);offset+=buffer.length;}
   return bytes;
 }
 
 function preprocess(bitmap){
-  const size=320,w=bitmap.width,h=bitmap.height,ratio=Math.min(size/w,size/h),rw=Math.max(1,Math.round(w*ratio)),rh=Math.max(1,Math.round(h*ratio)),left=Math.floor((size-rw)/2),top=Math.floor((size-rh)/2);
-  const square=canvas(size,size),ctx=square.getContext('2d',{willReadFrequently:true});const pad=modelInfo.padding_rgb;ctx.fillStyle=`rgb(${pad.join(',')})`;ctx.fillRect(0,0,size,size);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(bitmap,left,top,rw,rh);
+  const size=modelInfo.image_size,w=bitmap.width,h=bitmap.height,ratio=Math.min(size/w,size/h),rw=Math.max(1,Math.round(w*ratio)),rh=Math.max(1,Math.round(h*ratio)),left=Math.floor((size-rw)/2),top=Math.floor((size-rh)/2);
+  const square=canvas(size,size),ctx=square.getContext('2d',{willReadFrequently:true});const pad=modelInfo.padding_rgb;ctx.fillStyle=`rgb(${pad.join(',')})`;ctx.fillRect(0,0,size,size);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='low';ctx.drawImage(bitmap,left,top,rw,rh);
   const raw=ctx.getImageData(0,0,size,size).data,data=new Float32Array(3*size*size);
   for(let i=0;i<size*size;i++)for(let ch=0;ch<3;ch++)data[ch*size*size+i]=(raw[i*4+ch]/255-modelInfo.mean[ch])/modelInfo.std[ch];
   return {tensor:new ort.Tensor('float32',data,[1,3,size,size]),box:{left,top,rw,rh}};
@@ -170,7 +214,7 @@ function restoredMap(values,mapW,mapH,box,w,h,transform=v=>v){
   const small=canvas(mapW,mapH),d=small.getContext('2d').createImageData(mapW,mapH);
   for(let i=0;i<values.length;i++){const v=Math.max(0,Math.min(255,Math.round(transform(values[i])*255)));d.data[i*4]=d.data[i*4+1]=d.data[i*4+2]=v;d.data[i*4+3]=255;}
   small.getContext('2d').putImageData(d,0,0);
-  const cropped=canvas(box.rw,box.rh);cropped.getContext('2d').drawImage(small,box.left/mapW*320,box.top/mapH*320,box.rw/mapW*320,box.rh/mapH*320,0,0,box.rw,box.rh);
+  const cropped=canvas(box.rw,box.rh);cropped.getContext('2d').drawImage(small,box.left/modelInfo.image_size*mapW,box.top/modelInfo.image_size*mapH,box.rw/modelInfo.image_size*mapW,box.rh/modelInfo.image_size*mapH,0,0,box.rw,box.rh);
   const full=canvas(w,h),ctx=full.getContext('2d',{willReadFrequently:true});ctx.imageSmoothingEnabled=true;ctx.drawImage(cropped,0,0,w,h);return ctx.getImageData(0,0,w,h).data;
 }
 
@@ -223,18 +267,20 @@ function cannyEdges(rgba,w,h){
 $('analyze').onclick=async()=>{
   if(!file)return;$('analyze').disabled=true;$('results').hidden=true;$('selected').hidden=true;busy(true);
   try{
+    stage='image';
     const bitmap=await createImageBitmap(file,{imageOrientation:'from-image'});
     const scale=Math.min(1,1400/Math.max(bitmap.width,bitmap.height));
     const visualWidth=Math.max(1,Math.round(bitmap.width*scale)),visualHeight=Math.max(1,Math.round(bitmap.height*scale));
     const original=canvas(visualWidth,visualHeight);original.getContext('2d').drawImage(bitmap,0,0,visualWidth,visualHeight);
     await loadModels();const {tensor,box}=preprocess(bitmap);
-    status('Calculating disease predictions...');
+    bitmap.close();stage='classification';status('Calculating disease predictions...');
     const result=await sessions.classifier.run({input:tensor});
     const logits=Array.from(result.logits.data),temp=modelInfo.temperature,max=Math.max(...logits),exp=logits.map(v=>Math.exp((v-max)/temp)),sum=exp.reduce((a,b)=>a+b,0),probs=exp.map(v=>v/sum),cls=probs.indexOf(Math.max(...probs));
-    const resultWarning=qualityWarning|| (probs[cls]<.5?'The prediction is uncertain. Try a clearer close-up of a rice leaf and analyze again.':'');
+    const uncertain=probs[cls]<modelInfo.confidence_threshold;
+    const resultWarning=[uncertain?`Low-confidence prediction: the score is below the model's ${(modelInfo.confidence_threshold*100).toFixed(1)}% review threshold. Try a clearer close-up and review the result carefully.`:'',qualityWarning].filter(Boolean).join(' ');
     $('result-note').textContent=resultWarning;$('result-note').hidden=!resultWarning;
     const feat=result.features,cam=camPlusPlus(feat.data,feat.dims,modelInfo.cam_class_weights,cls),camPixels=restoredMap(cam,feat.dims[3],feat.dims[2],box,visualWidth,visualHeight);
-    status('Creating the disease mask and visualizations...');
+    stage='segmentation';status('Creating the disease mask and visualizations...');
     const seg=await sessions.segmenter.run({input:tensor}),logit=seg.mask_logits,maskPixels=restoredMap(logit.data,logit.dims[3],logit.dims[2],box,visualWidth,visualHeight,v=>1/(1+Math.exp(-v)));
     const visuals=makeVisuals(original,camPixels,maskPixels,modelInfo.segmentation_threshold);
     images={original,...visuals};$('prediction').textContent=modelInfo.labels[cls];$('confidence').textContent=pct(probs[cls]);$('coverage').textContent=pct(visuals.coverage);
@@ -244,6 +290,6 @@ $('analyze').onclick=async()=>{
     $('disease-tnau').href=detail.tnau;
     $('scores').replaceChildren(...probs.map((score,i)=>{const row=document.createElement('div');row.className='score';const label=document.createElement('div');label.className='score-label';const name=document.createElement('span');name.textContent=modelInfo.labels[i];const value=document.createElement('b');value.textContent=pct(score);label.append(name,value);const bar=document.createElement('div');bar.className='bar';const fill=document.createElement('span');fill.style.width=`${score*100}%`;bar.append(fill);row.append(label,bar);return row;}));
     document.querySelectorAll('[data-tab]').forEach(el=>el.classList.toggle('active',el.dataset.tab==='original'));draw('original');$('results').hidden=false;$('results').scrollIntoView({behavior:'smooth'});status('Analysis complete.');
-  }catch(err){console.error(err);$('selected').hidden=false;status('Analysis could not be completed. Try again or choose another clear photo.',true);}
+  }catch(err){console.error(err);$('selected').hidden=false;const message=stage==='image'?'This image could not be opened. Choose another JPG or PNG photo.':stage==='download'?'Model download failed or was incomplete. Check your connection and try again.':stage==='initialization'?'The models could not start in this browser. Close other tabs and try again in an up-to-date browser.':'Image analysis failed. Try again or choose another clear photo.';status(message,true);}
   finally{busy(false);$('analyze').disabled=false;}
 };
