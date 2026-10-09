@@ -34,7 +34,7 @@ function busy(active){
   $('loading-bar').hidden=!active;
   $('analyze-label').textContent=active?'Analyzing...':'Analyze image';
   $('analyze-arrow').hidden=active;
-  $('change').disabled=active;
+  $('change').disabled=active; $('add-photo').disabled=active;
   $('file').disabled=active;
   $('open-camera').disabled=active;
   $('camera-file').disabled=active;
@@ -63,7 +63,7 @@ async function choose(f){
   if(!['image/jpeg','image/png'].includes(f.type)){status('Choose a valid JPG, JPEG, or PNG image.',true);return;}
   $('camera-help').hidden=true;
   $('file').value='';
-  closeCamera(); file=f; $('input-options').hidden=true; $('selected').hidden=false;$('filename').textContent=f.name;$('filesize').textContent=(f.size/1024/1024).toFixed(2)+' MB';
+  closeCamera(); file=f; $('input-empty').hidden=true; $('input-options').hidden=true; $('selected').hidden=false;$('filename').textContent=f.name;$('filesize').textContent=(f.size/1024/1024).toFixed(2)+' MB';
   if($('thumb').src.startsWith('blob:'))URL.revokeObjectURL($('thumb').src);
   $('thumb').src=URL.createObjectURL(f);$('analyze').disabled=true;$('results').hidden=true;$('quality-note').hidden=true;qualityWarning='';status('Checking image clarity...');
   try{
@@ -72,12 +72,15 @@ async function choose(f){
     if(file!==f)return;
     qualityWarning=warning;$('quality-note').textContent=warning;$('quality-note').hidden=!warning;
     $('analyze').disabled=false;status('Image ready for analysis.');
-  }catch(err){if(file!==f)return;console.error(err);file=undefined;$('input-options').hidden=false;$('selected').hidden=true;URL.revokeObjectURL($('thumb').src);$('thumb').removeAttribute('src');status('This image could not be opened. Choose another JPG or PNG photo.',true);}
+  }catch(err){if(file!==f)return;console.error(err);file=undefined;$('input-empty').hidden=false;$('input-options').hidden=true;$('selected').hidden=true;URL.revokeObjectURL($('thumb').src);$('thumb').removeAttribute('src');status('This image could not be opened. Choose another JPG or PNG photo.',true);}
 }
 $('file').addEventListener('change',e=>choose(e.target.files[0]));
 $('camera-file').addEventListener('change',e=>{const photo=e.target.files[0];$('camera-file').value='';choose(photo);});
 $('native-camera').onclick=()=>$('camera-file').click();
-$('change').onclick=()=>{if(analyzing)return;const options=$('input-options');options.hidden=!options.hidden;$('change').setAttribute('aria-expanded',String(!options.hidden));};
+function togglePhotoOptions(){if(analyzing)return;const options=$('input-options');options.hidden=!options.hidden;for(const id of ['change','add-photo'])$(id).setAttribute('aria-expanded',String(!options.hidden));}
+$('change').onclick=togglePhotoOptions;
+$('add-photo').onclick=togglePhotoOptions;
+
 function showCameraHelp(reason){
   const embedded=window.self!==window.top;
   $('camera-help-text').textContent=embedded

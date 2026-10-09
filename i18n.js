@@ -1,4 +1,12 @@
 const translations = {
+ 'Add photo':'Masukkan Foto','Start with one clear photo':'Mulai dengan satu foto yang jelas','Keep the rice leaf in focus and use good lighting.':'Pastikan daun padi terlihat tajam dan pencahayaan cukup.',
+ 'FROM PHOTO TO INSIGHT':'DARI FOTO HINGGA HASIL','What happens to your photo?':'Bagaimana foto Anda diproses?',
+ 'Prepare the image':'Menyiapkan foto','The photo is resized and normalized for the models.':'Ukuran dan nilai piksel foto disesuaikan untuk model.',
+ 'Identify the disease':'Mengidentifikasi penyakit','DenseNet121 scores each of the four supported diseases.':'DenseNet121 menghitung skor untuk empat penyakit yang didukung.',
+ 'Map the affected area':'Memetakan area terdampak','U-Net++ predicts a mask of the affected region.':'U-Net++ memprediksi mask pada area terdampak.',
+ 'Explore the result':'Menjelajahi hasil','Review the prediction, heatmap, mask and overlay.':'Tinjau prediksi, peta panas, mask, dan overlay.',
+ 'Processed in your browser. Your photo is not uploaded to a server.':'Diproses di browser Anda. Foto tidak diunggah ke server.',
+
  'How it works':'Cara kerja','AI POWERED LEAF ANALYSIS':'ANALISIS DAUN DENGAN AI','Understand your rice leaf.':'Kenali kondisi daun padi Anda.',
  'Upload a photo to identify a supported disease and explore the visual evidence behind the result.':'Unggah foto untuk mengidentifikasi penyakit yang didukung dan melihat bukti visual dari hasil analisis.',
  'Add a photo':'Masukkan Foto','Choose a clear photograph of a rice leaf.':'Pilih foto daun padi yang jelas.','JPG or PNG':'JPG atau PNG','Upload a photo':'Upload Foto','Choose a file':'Pilih file','or drag it here':'atau seret ke sini','Supported formats: JPG, JPEG, PNG':'Format yang didukung: JPG, JPEG, PNG','Take a photo':'Ambil Foto',
@@ -69,11 +77,12 @@ export function translatePage() {
   }
  });
 }
-const picker=document.getElementById('language');picker.value=language;
-picker.addEventListener('change',()=>{
- language=picker.value;try{localStorage.setItem('riceleaf-language',language);}catch{}
- translatePage();
-});
+function updateLanguageButtons(){document.querySelectorAll('[data-language]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.language===language)));}
+document.querySelectorAll('[data-language]').forEach(button=>button.addEventListener('click',()=>{
+ language=button.dataset.language;try{localStorage.setItem('riceleaf-language',language);}catch{}
+ translatePage();updateLanguageButtons();
+}));
+updateLanguageButtons();
 translatePage();
 const observer=new MutationObserver(()=>{observer.disconnect();translatePage();observer.observe(document.body,{subtree:true,childList:true,characterData:true});});
 observer.observe(document.body,{subtree:true,childList:true,characterData:true});
