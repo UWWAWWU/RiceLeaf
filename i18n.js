@@ -1,4 +1,6 @@
 const translations = {
+ 'Close photo options':'Tutup pilihan foto','From input to output':'Dari input hingga output','Process illustration':'Ilustrasi proses','Leaf photo':'Foto daun','One clear image':'Satu foto yang jelas','Identify and segment':'Identifikasi dan segmentasi','Prediction and area mapping':'Prediksi dan pemetaan area','Scores and visual evidence':'Skor dan bukti visual',
+
  'Add photo':'Masukkan Foto','Start with one clear photo':'Mulai dengan satu foto yang jelas','Keep the rice leaf in focus and use good lighting.':'Pastikan daun padi terlihat tajam dan pencahayaan cukup.',
  'FROM PHOTO TO INSIGHT':'DARI FOTO HINGGA HASIL','What happens to your photo?':'Bagaimana foto Anda diproses?',
  'Prepare the image':'Menyiapkan foto','The photo is resized and normalized for the models.':'Ukuran dan nilai piksel foto disesuaikan untuk model.',

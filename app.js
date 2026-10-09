@@ -63,7 +63,7 @@ async function choose(f){
   if(!['image/jpeg','image/png'].includes(f.type)){status('Choose a valid JPG, JPEG, or PNG image.',true);return;}
   $('camera-help').hidden=true;
   $('file').value='';
-  closeCamera(); file=f; $('input-empty').hidden=true; $('input-options').hidden=true; $('selected').hidden=false;$('filename').textContent=f.name;$('filesize').textContent=(f.size/1024/1024).toFixed(2)+' MB';
+  closeCamera(); file=f; $('input-empty').hidden=true; closePhotoOptions(); $('selected').hidden=false;$('filename').textContent=f.name;$('filesize').textContent=(f.size/1024/1024).toFixed(2)+' MB';
   if($('thumb').src.startsWith('blob:'))URL.revokeObjectURL($('thumb').src);
   $('thumb').src=URL.createObjectURL(f);$('analyze').disabled=true;$('results').hidden=true;$('quality-note').hidden=true;qualityWarning='';status('Checking image clarity...');
   try{
@@ -72,15 +72,20 @@ async function choose(f){
     if(file!==f)return;
     qualityWarning=warning;$('quality-note').textContent=warning;$('quality-note').hidden=!warning;
     $('analyze').disabled=false;status('Image ready for analysis.');
-  }catch(err){if(file!==f)return;console.error(err);file=undefined;$('input-empty').hidden=false;$('input-options').hidden=true;$('selected').hidden=true;URL.revokeObjectURL($('thumb').src);$('thumb').removeAttribute('src');status('This image could not be opened. Choose another JPG or PNG photo.',true);}
+  }catch(err){if(file!==f)return;console.error(err);file=undefined;$('input-empty').hidden=false;closePhotoOptions();$('selected').hidden=true;URL.revokeObjectURL($('thumb').src);$('thumb').removeAttribute('src');status('This image could not be opened. Choose another JPG or PNG photo.',true);}
 }
 $('file').addEventListener('change',e=>choose(e.target.files[0]));
 $('camera-file').addEventListener('change',e=>{const photo=e.target.files[0];$('camera-file').value='';choose(photo);});
 $('native-camera').onclick=()=>$('camera-file').click();
-function togglePhotoOptions(){if(analyzing)return;const options=$('input-options');options.hidden=!options.hidden;for(const id of ['change','add-photo'])$(id).setAttribute('aria-expanded',String(!options.hidden));}
-$('change').onclick=togglePhotoOptions;
-$('add-photo').onclick=togglePhotoOptions;
-
+let photoTrigger;
+function closePhotoOptions(){const dialog=$('photo-dialog');if(dialog.open)dialog.close();for(const id of ['change','add-photo'])$(id).setAttribute('aria-expanded','false');}
+function openPhotoOptions(event){if(analyzing)return;photoTrigger=event?.currentTarget||$('add-photo');$('photo-dialog').showModal();photoTrigger.setAttribute('aria-expanded','true');}
+$('change').onclick=openPhotoOptions;
+$('add-photo').onclick=openPhotoOptions;
+$('close-photo-dialog').onclick=closePhotoOptions;
+$('photo-dialog').addEventListener('click',event=>{if(event.target===$('photo-dialog')){const box=event.target.getBoundingClientRect();if(event.clientX<box.left||event.clientX>box.right||event.clientY<box.top||event.clientY>box.bottom)closePhotoOptions();}});
+$('photo-dialog').addEventListener('close',()=>{for(const id of ['change','add-photo'])$(id).setAttribute('aria-expanded','false');photoTrigger?.focus();});
+$('file').addEventListener('click',closePhotoOptions);
 function showCameraHelp(reason){
   const embedded=window.self!==window.top;
   $('camera-help-text').textContent=embedded
@@ -109,7 +114,7 @@ $('flash-toggle').onclick=async()=>{
   finally{button.disabled=false;}
 };
 $('open-camera').onclick=async()=>{
-  if(analyzing)return;
+  if(analyzing)return;closePhotoOptions();
   $('camera-help').hidden=true;
   if(!navigator.mediaDevices?.getUserMedia){showCameraHelp('unavailable');return;}
   $('open-camera').disabled=true;status('Opening camera...');
@@ -270,7 +275,7 @@ function cannyEdges(rgba,w,h){
 }
 
 $('analyze').onclick=async()=>{
-  if(!file)return;$('analyze').disabled=true;$('results').hidden=true;$('input-options').hidden=true;busy(true);
+  if(!file)return;$('analyze').disabled=true;$('results').hidden=true;closePhotoOptions();busy(true);
   try{
     stage='image';
     const bitmap=await createImageBitmap(file,{imageOrientation:'from-image'});
