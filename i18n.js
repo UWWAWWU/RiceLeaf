@@ -1,4 +1,5 @@
 const translations = {
+ 'Photo':'Foto','Rice leaf image':'Gambar daun padi','Segmentation':'Segmentasi','Locate the affected area':'Menentukan area terdampak','Classification':'Klasifikasi','Result':'Hasil','Prediction and visualizations':'Prediksi dan visualisasi',
  'Close photo options':'Tutup pilihan foto','From input to output':'Dari input hingga output','Process illustration':'Ilustrasi proses','Leaf photo':'Foto daun','One clear image':'Satu foto yang jelas','Identify and segment':'Identifikasi dan segmentasi','Prediction and area mapping':'Prediksi dan pemetaan area','Scores and visual evidence':'Skor dan bukti visual',
 
  'Add photo':'Masukkan Foto','Start with one clear photo':'Mulai dengan satu foto yang jelas','Keep the rice leaf in focus and use good lighting.':'Pastikan daun padi terlihat tajam dan pencahayaan cukup.',
@@ -7,7 +8,6 @@ const translations = {
  'Identify the disease':'Mengidentifikasi penyakit','DenseNet121 scores each of the four supported diseases.':'DenseNet121 menghitung skor untuk empat penyakit yang didukung.',
  'Map the affected area':'Memetakan area terdampak','U-Net++ predicts a mask of the affected region.':'U-Net++ memprediksi mask pada area terdampak.',
  'Explore the result':'Menjelajahi hasil','Review the prediction, heatmap, mask and overlay.':'Tinjau prediksi, peta panas, mask, dan overlay.',
- 'Processed in your browser. Your photo is not uploaded to a server.':'Diproses di browser Anda. Foto tidak diunggah ke server.',
 
  'How it works':'Cara kerja','AI POWERED LEAF ANALYSIS':'ANALISIS DAUN DENGAN AI','Understand your rice leaf.':'Kenali kondisi daun padi Anda.',
  'Upload a photo to identify a supported disease and explore the visual evidence behind the result.':'Unggah foto untuk mengidentifikasi penyakit yang didukung dan melihat bukti visual dari hasil analisis.',
