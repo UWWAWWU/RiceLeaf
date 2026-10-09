@@ -9,6 +9,8 @@ RiceLeaf AI identifies four rice leaf diseases and visualizes the areas associat
 ## Features
 
 - Upload JPG or PNG images, drag and drop a photo, or capture one with a camera.
+- Switch between English and Indonesian. English is the default, and the selected language is remembered.
+- Review the selected photo and use Change photo to choose a replacement from a file or camera.
 - Compare probabilities for Bacterial Blight, Blast, Brown Spot, and Tungro.
 - Explore the original image, activation heatmap, predicted mask, overlay, and edges.
 - Review low-confidence predictions using the threshold selected during validation.

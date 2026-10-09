@@ -1,3 +1,4 @@
+import { translatePage } from './i18n.js';
 const $ = id => document.getElementById(id);
 const labels = ['Bacterial Blight', 'Blast', 'Brown Spot', 'Tungro'];
 const captions = {original:'Original photograph',gradcam:'Regions influencing the classification',mask:'Predicted disease mask',overlay:'Predicted area highlighted in red',canny:'Edges within the predicted disease region'};
@@ -33,6 +34,7 @@ function busy(active){
   $('loading-bar').hidden=!active;
   $('analyze-label').textContent=active?'Analyzing...':'Analyze image';
   $('analyze-arrow').hidden=active;
+  $('change').disabled=active;
   $('file').disabled=active;
   $('open-camera').disabled=active;
   $('camera-file').disabled=active;
@@ -61,7 +63,7 @@ async function choose(f){
   if(!['image/jpeg','image/png'].includes(f.type)){status('Choose a valid JPG, JPEG, or PNG image.',true);return;}
   $('camera-help').hidden=true;
   $('file').value='';
-  file=f; $('selected').hidden=false;$('filename').textContent=f.name;$('filesize').textContent=(f.size/1024/1024).toFixed(2)+' MB';
+  closeCamera(); file=f; $('input-options').hidden=true; $('selected').hidden=false;$('filename').textContent=f.name;$('filesize').textContent=(f.size/1024/1024).toFixed(2)+' MB';
   if($('thumb').src.startsWith('blob:'))URL.revokeObjectURL($('thumb').src);
   $('thumb').src=URL.createObjectURL(f);$('analyze').disabled=true;$('results').hidden=true;$('quality-note').hidden=true;qualityWarning='';status('Checking image clarity...');
   try{
@@ -70,12 +72,12 @@ async function choose(f){
     if(file!==f)return;
     qualityWarning=warning;$('quality-note').textContent=warning;$('quality-note').hidden=!warning;
     $('analyze').disabled=false;status('Image ready for analysis.');
-  }catch(err){if(file!==f)return;console.error(err);file=undefined;$('selected').hidden=true;URL.revokeObjectURL($('thumb').src);$('thumb').removeAttribute('src');status('This image could not be opened. Choose another JPG or PNG photo.',true);}
+  }catch(err){if(file!==f)return;console.error(err);file=undefined;$('input-options').hidden=false;$('selected').hidden=true;URL.revokeObjectURL($('thumb').src);$('thumb').removeAttribute('src');status('This image could not be opened. Choose another JPG or PNG photo.',true);}
 }
 $('file').addEventListener('change',e=>choose(e.target.files[0]));
 $('camera-file').addEventListener('change',e=>{const photo=e.target.files[0];$('camera-file').value='';choose(photo);});
 $('native-camera').onclick=()=>$('camera-file').click();
-$('change').onclick=()=>$('file').click();
+$('change').onclick=()=>{if(analyzing)return;const options=$('input-options');options.hidden=!options.hidden;$('change').setAttribute('aria-expanded',String(!options.hidden));};
 function showCameraHelp(reason){
   const embedded=window.self!==window.top;
   $('camera-help-text').textContent=embedded
@@ -265,7 +267,7 @@ function cannyEdges(rgba,w,h){
 }
 
 $('analyze').onclick=async()=>{
-  if(!file)return;$('analyze').disabled=true;$('results').hidden=true;$('selected').hidden=true;busy(true);
+  if(!file)return;$('analyze').disabled=true;$('results').hidden=true;$('input-options').hidden=true;busy(true);
   try{
     stage='image';
     const bitmap=await createImageBitmap(file,{imageOrientation:'from-image'});
@@ -277,7 +279,7 @@ $('analyze').onclick=async()=>{
     const result=await sessions.classifier.run({input:tensor});
     const logits=Array.from(result.logits.data),temp=modelInfo.temperature,max=Math.max(...logits),exp=logits.map(v=>Math.exp((v-max)/temp)),sum=exp.reduce((a,b)=>a+b,0),probs=exp.map(v=>v/sum),cls=probs.indexOf(Math.max(...probs));
     const uncertain=probs[cls]<modelInfo.confidence_threshold;
-    const resultWarning=[uncertain?`Low-confidence prediction: the score is below the model's ${(modelInfo.confidence_threshold*100).toFixed(1)}% review threshold. Try a clearer close-up and review the result carefully.`:'',qualityWarning].filter(Boolean).join(' ');
+    const resultWarning=[uncertain?`Low confidence prediction: the score is below the model's ${(modelInfo.confidence_threshold*100).toFixed(1)}% review threshold. Try a clearer close-up and review the result carefully.`:'',qualityWarning].filter(Boolean).join(' ');
     $('result-note').textContent=resultWarning;$('result-note').hidden=!resultWarning;
     const feat=result.features,cam=camPlusPlus(feat.data,feat.dims,modelInfo.cam_class_weights,cls),camPixels=restoredMap(cam,feat.dims[3],feat.dims[2],box,visualWidth,visualHeight);
     stage='segmentation';status('Creating the disease mask and visualizations...');
@@ -290,6 +292,6 @@ $('analyze').onclick=async()=>{
     $('disease-tnau').href=detail.tnau;
     $('scores').replaceChildren(...probs.map((score,i)=>{const row=document.createElement('div');row.className='score';const label=document.createElement('div');label.className='score-label';const name=document.createElement('span');name.textContent=modelInfo.labels[i];const value=document.createElement('b');value.textContent=pct(score);label.append(name,value);const bar=document.createElement('div');bar.className='bar';const fill=document.createElement('span');fill.style.width=`${score*100}%`;bar.append(fill);row.append(label,bar);return row;}));
     document.querySelectorAll('[data-tab]').forEach(el=>el.classList.toggle('active',el.dataset.tab==='original'));draw('original');$('results').hidden=false;$('results').scrollIntoView({behavior:'smooth'});status('Analysis complete.');
-  }catch(err){console.error(err);$('selected').hidden=false;const message=stage==='image'?'This image could not be opened. Choose another JPG or PNG photo.':stage==='download'?'Model download failed or was incomplete. Check your connection and try again.':stage==='initialization'?'The models could not start in this browser. Close other tabs and try again in an up-to-date browser.':'Image analysis failed. Try again or choose another clear photo.';status(message,true);}
+  }catch(err){console.error(err);$('selected').hidden=false;const message=stage==='image'?'This image could not be opened. Choose another JPG or PNG photo.':stage==='download'?'Model download failed or was incomplete. Check your connection and try again.':stage==='initialization'?'The models could not start in this browser. Close other tabs and try again in an updated browser.':'Image analysis failed. Try again or choose another clear photo.';status(message,true);}
   finally{busy(false);$('analyze').disabled=false;}
 };
