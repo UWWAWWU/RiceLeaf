@@ -1,0 +1,37 @@
+{
+  "format": "onnx-chunks",
+  "chunk_size_bytes": 10000000,
+  "models": {
+    "pipeline": {
+      "size_bytes": 40795709,
+      "sha256": "d7f8e447d31449aca343ddb9d7b43c9667f86bab45b615d4b2ea50b7b9cf31d5",
+      "parts": [
+        {
+          "file": "pipeline-v2.part-00",
+          "size_bytes": 10000000,
+          "sha256": "5c8d90a09370bf676b74d90250b02e566936eec010adc646cd7a1cb97d56a91f"
+        },
+        {
+          "file": "pipeline-v2.part-01",
+          "size_bytes": 10000000,
+          "sha256": "c83087226f6cd19924e27183bc05cf8dab5da6b47c1342af780f18c198eb3a7f"
+        },
+        {
+          "file": "pipeline-v2.part-02",
+          "size_bytes": 10000000,
+          "sha256": "33d3aa048af0ecd7a58e1bf7018d4e6d21ad68cbd8114ad658820ea0ee34b8a0"
+        },
+        {
+          "file": "pipeline-v2.part-03",
+          "size_bytes": 10000000,
+          "sha256": "3b5ee3e27007a6920b3121fc2db4df044ed2274d4164a6ff160a61500680d0a7"
+        },
+        {
+          "file": "pipeline-v2.part-04",
+          "size_bytes": 795709,
+          "sha256": "b232f2e07404bea82c3a6bd75b12dbc932528eb1479d6d905020f4b634aa8252"
+        }
+      ]
+    }
+  }
+}

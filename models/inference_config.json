@@ -1,0 +1,55 @@
+{
+  "model_file": "riceleaf_pipeline.onnx",
+  "input_name": "images",
+  "input_dtype": "float32",
+  "input_layout": "NCHW",
+  "image_size": 320,
+  "color_mode": "RGB",
+  "resize": "longest side to 320, preserve aspect ratio",
+  "interpolation": "bilinear",
+  "padding": "center, constant 0, before normalization",
+  "normalization": {
+    "scale": 255.0,
+    "mean": [
+      0.485,
+      0.456,
+      0.406
+    ],
+    "std": [
+      0.229,
+      0.224,
+      0.225
+    ]
+  },
+  "class_names": [
+    "Bacterialblight",
+    "Blast",
+    "Brownspot",
+    "Tungro"
+  ],
+  "outputs": {
+    "disease_probabilities": "N x 1 x 320 x 320",
+    "class_probabilities": "N x 4"
+  },
+  "mask_threshold": 0.5,
+  "shape_feature_names": [
+    "area_fraction",
+    "centroid_x",
+    "centroid_y",
+    "spread_x",
+    "spread_y",
+    "xy_correlation",
+    "elongation_ratio",
+    "bbox_width",
+    "bbox_height",
+    "bbox_extent",
+    "occupied_rows",
+    "occupied_columns",
+    "top_left",
+    "top_right",
+    "bottom_left",
+    "bottom_right",
+    "boundary_density",
+    "region_probability"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "source": "notebooks/RiceLeaf.ipynb outputs, cells 30 and 31",
+  "method": "U-Net++ EfficientNetB0 + segmentation-guided EfficientNetB0",
+  "test_images": 869,
+  "classification": {
+    "correct": 861,
+    "incorrect": 8,
+    "accuracy": 0.9907940161104718,
+    "macro_f1_reported": 0.9906
+  },
+  "segmentation": {
+    "dice_reported": 0.8095,
+    "iou_reported": 0.6895
+  },
+  "external_evaluation": "not performed"
+}
