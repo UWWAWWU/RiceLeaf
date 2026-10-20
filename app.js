@@ -129,7 +129,9 @@ $('camera-file').addEventListener('change',e=>{const photo=e.target.files[0];$('
 $('native-camera').onclick=()=>$('camera-file').click();
 let photoTrigger;
 function closePhotoOptions(){const dialog=$('photo-dialog');if(dialog.open)dialog.close();for(const id of ['change','add-photo'])$(id).setAttribute('aria-expanded','false');}
-function openPhotoOptions(event){if(analyzing)return;photoTrigger=event?.currentTarget;$('file').click();}
+function openPhotoOptions(event){if(analyzing)return;photoTrigger=event?.currentTarget||$('change');$('photo-dialog').showModal();photoTrigger.setAttribute('aria-expanded','true');}
+$('change-upload').onclick=()=>{closePhotoOptions();$('file').value='';$('file').click();};
+$('change-camera').onclick=()=>{closePhotoOptions();$('open-camera').click();};
 $('change').onclick=openPhotoOptions;
 $('add-photo').onclick=openPhotoOptions;
 $('close-photo-dialog').onclick=closePhotoOptions;
