@@ -4,7 +4,7 @@ const stages=[...root.querySelectorAll('.processing-stages span')];
 const steps=[
  ['Original','One RGB image is the model input.'],
  ['320 × 320','Preserved proportions · black padding · ImageNet normalization'],
- ['U-Net++ + EfficientNetB0','Disease probabilities guide region features; the thresholded mask provides 18 shape features.'],
+ ['U-Net++ + EfficientNetB0','The probability map is used to extract region features, the mask is used to calculate 18 shape features.'],
  ['Combined features','The three feature groups are combined into one vector.'],
  ['Four disease probabilities','Scores come from the model output for your uploaded photo.'],
  ['Prediction and visualizations','Compare the original photo with the heatmap and overlay.']
@@ -42,3 +42,5 @@ export async function completeProcessingAnimation(){
 }
 
 export function getProcessingTime(){return time;}
+
+

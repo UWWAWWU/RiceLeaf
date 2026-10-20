@@ -54,13 +54,7 @@ async function prepareModel(){
 }
 $('retry-model').onclick=()=>{void prepareModel().catch(()=>{});};
 const status = (message,error=false) => { $('status').textContent=message; $('status').classList.toggle('error',error); $('processing-status').textContent=message;$('processing-status').classList.toggle('error',error); };
-function showView(view){
-  currentView=view;
-  document.body.classList.toggle('processing-screen',view==='processing');
-  $('home-view').hidden=view!=='home';$('processing-view').hidden=view!=='processing';$('results').hidden=view!=='results';
-  $('about').hidden=view!=='home';document.querySelector('.header-link').hidden=view!=='home';
-  window.scrollTo({top:0,behavior:'instant'});
-}
+function showView(view){currentView=view;$('check-dialog').dataset.view=view;$('home-view').hidden=view!=='home';$('processing-view').hidden=view!=='processing';$('results').hidden=view!=='results';$('check-dialog').scrollTo({top:0,behavior:'instant'});}
 let photoSelection=0;
 $('try-another-photo').onclick=()=>{
   photoSelection++;stopProcessingAnimation();closeCamera();closePhotoOptions();
@@ -71,7 +65,7 @@ $('try-another-photo').onclick=()=>{
   $('quality-note').hidden=true;$('result-note').hidden=true;$('camera-help').hidden=true;
   $('scores').replaceChildren();for(const id of ['prediction','confidence','coverage'])$(id).textContent='—';
   $('output').width=0;$('output').height=0;busy(false);$('analyze').disabled=true;
-  status('Your image stays in your browser during analysis.');showView('home');$('add-photo').focus({preventScroll:true});
+  status('Your image stays in your browser during analysis.');showView('home');$('file').focus({preventScroll:true});
 };
 function busy(active){
   analyzing=active;
@@ -135,7 +129,7 @@ $('camera-file').addEventListener('change',e=>{const photo=e.target.files[0];$('
 $('native-camera').onclick=()=>$('camera-file').click();
 let photoTrigger;
 function closePhotoOptions(){const dialog=$('photo-dialog');if(dialog.open)dialog.close();for(const id of ['change','add-photo'])$(id).setAttribute('aria-expanded','false');}
-function openPhotoOptions(event){if(analyzing)return;photoTrigger=event?.currentTarget||$('add-photo');$('photo-dialog').showModal();photoTrigger.setAttribute('aria-expanded','true');}
+function openPhotoOptions(event){if(analyzing)return;photoTrigger=event?.currentTarget;$('file').click();}
 $('change').onclick=openPhotoOptions;
 $('add-photo').onclick=openPhotoOptions;
 $('close-photo-dialog').onclick=closePhotoOptions;
@@ -396,5 +390,4 @@ async function restoreTab(){
  }catch(error){console.error('Could not restore this tab',error);}
  finally{restoring=false;$('add-photo').disabled=false;await persistTab();}
 }
-void prepareModel().catch(()=>{});
-void restoreTab();
+let restoreStarted=false;document.addEventListener('riceleaf:open-check',()=>{if(!$('check-dialog').open)$('check-dialog').showModal();void prepareModel().catch(()=>{});if(!restoreStarted){restoreStarted=true;void restoreTab();}});$('check-dialog').addEventListener('close',closeCamera);window.addEventListener('pagehide',closeCamera);document.dispatchEvent(new Event('riceleaf:engine-ready'));

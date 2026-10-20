@@ -21,7 +21,7 @@ const translations = {
  "Predicted area highlighted in red with its mask boundary":"Area prediksi ditandai merah beserta garis batas mask",
  "Waiting for model predictions\u2026":"Menunggu prediksi model\u2026",
  "Model probabilities for your photo":"Probabilitas model untuk foto Anda",
- "Classification provides the prediction and scores; segmentation provides the heatmap, mask, overlay and mask coverage.":"Klasifikasi menghasilkan prediksi dan skor; segmentasi menghasilkan peta panas, mask, overlay, dan cakupan mask.",
+ "Classification provides the prediction and scores, segmentation provides the heatmap, mask, overlay and mask coverage.":"Klasifikasi menghasilkan prediksi dan skor, segmentasi menghasilkan peta panas, mask, overlay, dan cakupan mask.",
 
  "JPG, PNG or HEIC":"JPG, PNG atau HEIC",
  "Supported formats: JPG, JPEG, PNG, HEIC, HEIF":"Format yang didukung: JPG, JPEG, PNG, HEIC, HEIF",
@@ -47,7 +47,7 @@ const translations = {
  "Full image + disease region + shape":"Foto penuh + area penyakit + bentuk",
  "Full image features + disease region features + 18 shape features → one combined vector.":"Fitur foto penuh + fitur area penyakit + 18 fitur bentuk → satu vektor gabungan.",
  "The classifier receives the combined features and predicts probabilities for four diseases.":"Model klasifikasi menerima fitur gabungan dan memprediksi probabilitas empat penyakit.",
- "Classification provides the prediction and scores; segmentation provides the heatmap, mask, overlay, edges and mask coverage.":"Klasifikasi menghasilkan prediksi dan skor; segmentasi menghasilkan peta panas, mask, overlay, tepi, dan luas mask.",
+ "Classification provides the prediction and scores, segmentation provides the heatmap, mask, overlay, edges and mask coverage.":"Klasifikasi menghasilkan prediksi dan skor, segmentasi menghasilkan peta panas, mask, overlay, tepi, dan luas mask.",
  "Full image":"Foto penuh",
  "Disease region":"Area penyakit",
  "18 shape features":"18 fitur bentuk",
@@ -108,8 +108,9 @@ const descriptions = [
  ['Brown spot is a fungal', 'Bercak cokelat merupakan penyakit jamur yang dapat muncul sejak fase bibit. Gejalanya tampak pada daun, pelepah, dan gabah. Bercak kecil berkembang menjadi lesi oval berwarna cokelat gelap, terkadang dikelilingi warna kuning. Bercak yang menyatu dapat mengeringkan bagian daun. Infeksi pada gabah menyebabkan perubahan warna, sementara serangan luas dapat merusak bibit serta menurunkan mutu dan bobot gabah.'],
  ['Tungro is caused', 'Tungro disebabkan oleh virus yang ditularkan oleh wereng hijau. Penyakit ini memengaruhi pertumbuhan tanaman dan warna daun. Daun berubah menjadi kuning atau jingga kekuningan dari ujung ke bagian bawah, terkadang disertai bercak. Tanaman dapat menjadi kerdil dan menghasilkan lebih sedikit anakan. Infeksi dini atau berat dapat menunda pembungaan dan menghasilkan malai kecil dengan gabah yang lebih sedikit atau kurang terisi.']
 ];
+Object.assign(translations,{'START A CHECK':'MULAI PEMERIKSAAN','One photo.':'Satu foto.','Your first step.':'Langkah pertama Anda.','Upload photo':'Unggah foto','Take a photo':'Ambil foto','Choose from your device':'Pilih dari perangkat Anda','Use your device camera':'Gunakan kamera perangkat','Choose file →':'Pilih file →','Open camera →':'Buka kamera →','Use a clear, well lit photo':'Gunakan foto yang jelas dan terang','Change photo':'Ganti foto','The probability map is used to extract region features, the mask is used to calculate 18 shape features.':'Peta probabilitas digunakan untuk mengambil fitur area, mask digunakan untuk menghitung 18 fitur bentuk.'});
 let language='en';
-try { if(localStorage.getItem('riceleaf-language')==='id') language='id'; } catch {}
+
 const originals=new WeakMap();
 const reverse=new Map(Object.entries(translations).map(([en,id])=>[id,en]));
 export function translate(text) {
@@ -134,9 +135,9 @@ function translateText(node) {
 }
 export function translatePage() {
  document.documentElement.lang=language;
- const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
+ const walker=document.createTreeWalker(document.getElementById('check-dialog'),NodeFilter.SHOW_TEXT);
  while(walker.nextNode()) {const n=walker.currentNode;if(!n.parentElement.closest('script,style,select,#filename,#filesize'))translateText(n);}
- document.querySelectorAll('[aria-label],[alt]').forEach(el=>{
+ document.getElementById('check-dialog').querySelectorAll('[aria-label],[alt]').forEach(el=>{
   for(const attr of ['aria-label','alt'])if(el.hasAttribute(attr)){
    const key='original'+attr.replace('-','');
    const source=el.dataset[key] || el.getAttribute(attr);el.dataset[key]=source;el.setAttribute(attr,translate(source));
@@ -150,5 +151,7 @@ document.querySelectorAll('[data-language]').forEach(button=>button.addEventList
 }));
 updateLanguageButtons();
 translatePage();
-const observer=new MutationObserver(()=>{observer.disconnect();translatePage();observer.observe(document.body,{subtree:true,childList:true,characterData:true});});
-observer.observe(document.body,{subtree:true,childList:true,characterData:true});
+const observer=new MutationObserver(()=>{observer.disconnect();translatePage();observer.observe(document.getElementById('check-dialog'),{subtree:true,childList:true,characterData:true});});
+observer.observe(document.getElementById('check-dialog'),{subtree:true,childList:true,characterData:true});
+
+document.addEventListener('riceleaf:language',event=>{language=event.detail;translatePage();updateLanguageButtons();});
